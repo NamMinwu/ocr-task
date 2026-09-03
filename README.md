@@ -59,20 +59,29 @@ export ANTHROPIC_API_KEY=sk-ant-...
 2. **API 및 서비스 → 라이브러리**에서 다음 두 개를 사용 설정합니다.
    - Google Sheets API
    - Google Drive API
-3. **API 및 서비스 → 사용자 인증 정보 → 사용자 인증 정보 만들기 → 서비스 계정**
-   으로 서비스 계정을 만듭니다.
-4. 만든 서비스 계정 → **키 → 키 추가 → 새 키 만들기 → JSON**을 내려받아
-   `credentials/service-account.json`으로 저장합니다.
-5. 서비스 계정 이메일(`...@<프로젝트>.iam.gserviceaccount.com`)을 복사해 둡니다.
+3. **API 및 서비스 → OAuth 동의 화면**을 설정합니다.
+   - User Type: **외부(External)**
+   - 앱 이름·지원 이메일만 채우면 됩니다.
+   - **테스트 사용자**에 본인 Google 계정을 추가합니다. 이 단계를 빠뜨리면
+     인증 시 "액세스 차단됨"이 표시됩니다.
+4. **API 및 서비스 → 사용자 인증 정보 → 사용자 인증 정보 만들기 →
+   OAuth 클라이언트 ID**를 만듭니다.
+   - 애플리케이션 유형: **데스크톱 앱**
+5. 내려받은 JSON을 `credentials/oauth-client.json`으로 저장합니다.
 
-### 3. 스프레드시트와 Drive 폴더 공유
+> **왜 서비스 계정이 아닌가**
+> 서비스 계정은 개인 Drive에 파일을 소유할 수 없습니다
+> (`403 storageQuotaExceeded`). 공유 드라이브가 있는 Google Workspace
+> 환경에서만 업로드가 가능하므로, 개인 Google 계정에서도 동작하도록
+> 사용자 계정 OAuth를 사용합니다. 파일은 본인 소유로 본인 용량에 생성됩니다.
 
-이 단계를 빠뜨리면 403으로 중단됩니다.
+### 3. 스프레드시트와 Drive 폴더
 
-1. 빈 Google 스프레드시트를 만들고, **공유**에서 위 서비스 계정 이메일을
-   **편집자**로 추가합니다.
+본인 계정으로 인증하므로 **별도 공유 설정이 필요 없습니다.**
+
+1. 빈 Google 스프레드시트를 만듭니다.
    URL의 `/d/`와 `/edit` 사이 문자열이 스프레드시트 ID입니다.
-2. Google Drive에 폴더를 만들고, 같은 서비스 계정 이메일을 **편집자**로 추가합니다.
+2. Google Drive에 폴더를 만듭니다.
    URL의 `folders/` 뒤 문자열이 폴더 ID입니다.
 
 ### 4. 설정 파일 정리
@@ -93,7 +102,8 @@ ocr:
   claude:
     api-key: "sk-ant-..."
   google:
-    credentials-path: ./credentials/service-account.json
+    oauth-client-path: ./credentials/oauth-client.json
+    token-store-path: ./credentials/tokens
     spreadsheet-id: "1AbC...xYz"
     drive-folder-id: "1DeF...uVw"
 ```
@@ -109,6 +119,10 @@ ocr:
 ```bash
 ./gradlew bootRun
 ```
+
+**최초 실행 시 브라우저가 열리고 Google 계정 동의를 요청합니다.** 승인하면
+토큰이 `credentials/tokens/`에 캐시되어 다음부터는 묻지 않습니다. 다시
+인증하려면 이 디렉토리를 지우면 됩니다.
 
 옵션:
 
@@ -187,9 +201,17 @@ OCR 결과는 항상 `<--output>/raw/`에 저장됩니다 (기본값: `output/ra
 
 ## 문제 해결
 
-**`Drive 업로드 권한 오류 (403 insufficientPermissions)`**
-Drive 폴더를 서비스 계정 이메일에 편집자로 공유했는지 확인하세요. 조직 정책이
-링크 공유를 차단하는 경우 `=IMAGE()` 렌더링이 불가능합니다.
+**`Drive 업로드 권한 오류 (403)`**
+`credentials/tokens/`를 지우고 다시 실행해 인증을 새로 받아 보세요. 폴더 ID가
+본인 계정의 폴더를 가리키는지도 확인하세요.
+
+**인증 시 "액세스 차단됨: 이 앱은 확인되지 않았습니다"**
+OAuth 동의 화면의 **테스트 사용자**에 본인 계정이 추가되지 않았습니다.
+GCP 콘솔 → API 및 서비스 → OAuth 동의 화면에서 추가하세요.
+
+**`OAuth 클라이언트 파일을 찾을 수 없습니다`**
+`credentials/oauth-client.json` 경로를 확인하세요. 애플리케이션 유형이
+**데스크톱 앱**이어야 합니다. 웹 애플리케이션 유형은 동작하지 않습니다.
 
 **시트의 사진 칸이 깨져 보임**
 Drive가 썸네일을 생성하는 데 시간이 걸릴 수 있습니다. 잠시 후 새로고침하세요.
@@ -201,9 +223,6 @@ Drive가 썸네일을 생성하는 데 시간이 걸릴 수 있습니다. 잠시
 **설정한 값이 반영되지 않음**
 `application-local.yml` 이 저장소 루트(`build.gradle` 과 같은 위치)에 있는지
 확인하세요. `src/main/resources/` 안이 아닙니다. 파일명 오타도 흔한 원인입니다.
-
-**`서비스 계정 키 파일을 찾을 수 없습니다`**
-`credentials/service-account.json` 경로를 확인하세요.
 
 **이미지 장변 초과 오류**
 이 프로그램은 판독 품질을 위해 이미지를 자동 축소하지 않습니다. 장변 2576px 이하로

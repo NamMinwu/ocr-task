@@ -12,8 +12,10 @@ ocr:
     api-key: "sk-ant-..."
 
   google:
-    # 서비스 계정 JSON 키 파일 경로
-    credentials-path: ./credentials/service-account.json
+    # GCP 콘솔에서 받은 OAuth 데스크톱 앱 클라이언트 JSON
+    oauth-client-path: ./credentials/oauth-client.json
+    # 최초 동의 후 토큰이 캐시되는 위치. 지우면 다시 동의해야 합니다.
+    token-store-path: ./credentials/tokens
 
     # 스프레드시트 URL 의 /d/ 와 /edit 사이 문자열
     #   docs.google.com/spreadsheets/d/★여기★/edit

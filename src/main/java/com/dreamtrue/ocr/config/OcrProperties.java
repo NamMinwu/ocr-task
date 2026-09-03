@@ -20,7 +20,10 @@ public record OcrProperties(
     ) {}
 
     public record Google(
-            @DefaultValue("./credentials/service-account.json") String credentialsPath,
+            /** GCP 콘솔에서 받은 OAuth 2.0 데스크톱 앱 클라이언트 JSON. */
+            @DefaultValue("./credentials/oauth-client.json") String oauthClientPath,
+            /** 최초 동의 후 토큰이 캐시되는 디렉토리. 지우면 다시 동의해야 한다. */
+            @DefaultValue("./credentials/tokens") String tokenStorePath,
             @DefaultValue("") String spreadsheetId,
             @DefaultValue("") String driveFolderId
     ) {}

@@ -1,5 +1,6 @@
 package com.dreamtrue.ocr.sheets;
 
+import com.dreamtrue.ocr.config.GoogleConfig;
 import com.dreamtrue.ocr.config.OcrProperties;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.*;
@@ -23,14 +24,8 @@ public class GoogleSheetsGateway implements SheetsGateway {
     private final OcrProperties properties;
 
     private String spreadsheetId() {
-        String id = properties.google().spreadsheetId();
-        if (id == null || id.isBlank()) {
-            throw new IllegalStateException(
-                    "ocr.google.spreadsheet-id 가 비어 있습니다. application.yml 을 확인하세요.");
-        }
-        return id;
+        return GoogleConfig.requireSpreadsheetId(properties.google().spreadsheetId());
     }
-
     @Override
     @SneakyThrows
     public void deleteAllSheetsExceptOne() {

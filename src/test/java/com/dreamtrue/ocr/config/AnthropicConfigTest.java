@@ -41,6 +41,6 @@ class AnthropicConfigTest {
         return new OcrProperties(
                 "./input", "./output", 1, 1,
                 new OcrProperties.Claude("claude-opus-5", 16000L, apiKey),
-                new OcrProperties.Google("./credentials/service-account.json", "", ""));
+                new OcrProperties.Google("./credentials/oauth-client.json", "./credentials/tokens", "", ""));
     }
 }
