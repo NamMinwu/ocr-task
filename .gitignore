@@ -10,3 +10,6 @@ build
 # 자격증명과 실행 산출물
 credentials/
 output/
+
+# SDD 작업 공간
+.superpowers/
