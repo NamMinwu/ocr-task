@@ -89,7 +89,7 @@ public class DriveImageUploader {
                 Drive 업로드 권한 오류 (%d %s)
                   폴더 ID : %s
                   확인 : %s
-                  OCR 결과는 output/raw/ 에 보존되었습니다. 권한 수정 후 --skip-ocr 로 재실행하세요."""
+                  OCR 결과는 output/raw/ 에 보존되었습니다. 권한 수정 후 --retry-failed 로 재실행하세요."""
                 .formatted(e.getStatusCode(), e.getStatusMessage(), folderId, advice);
     }
 

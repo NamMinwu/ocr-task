@@ -224,13 +224,12 @@ record OcrResult(
 }
 ```
 
-**쓰기는 항상, 읽기는 `--skip-ocr`일 때만.**
+**쓰기는 항상, 읽기는 `--retry-failed`일 때만.**
 
 | | 저장된 결과가 있으면 | 없으면 |
 |---|---|---|
 | 기본 실행 | 무시하고 API 호출 | API 호출 |
 | `--retry-failed` | 재사용 | API 호출 ← 실패했던 장만 |
-| `--skip-ocr` | 재사용 | OCR 실패로 처리 (API 호출 금지) |
 
 쓰기는 어느 모드에서나 항상 수행한다. `OcrResult` POJO와 Jackson이 이미 있어 비용이
 거의 없다.
@@ -240,10 +239,16 @@ record OcrResult(
 없다. sha256 비교, promptVersion 비교, model 비교, 무효화 로그, `--no-cache` 플래그가
 모두 불필요해진다.
 
-낡은 결과를 쓰게 되는 경우는 `--skip-ocr`을 직접 지정했을 때뿐이며, 이는 "디스크에 있는
+낡은 결과를 쓰게 되는 경우는 `--retry-failed`를 직접 지정했을 때뿐이며, 이는 "디스크에 있는
 것을 사용하라"는 명시적 요청이므로 예상 밖의 동작이 아니다.
 
-**용처 (둘 다 `--skip-ocr` 사용):**
+`--skip-ocr`(저장된 결과가 없으면 API 를 호출하지 않고 실패시키는 모드)은 두지 않는다.
+저장된 결과가 모두 있는 정상 상황에서 `--retry-failed` 와 동작이 같고, 다른 경우는
+저장 파일이 비어 있을 때뿐인데 그때는 시트가 실패 표시로 덮어써져 손해만 크다.
+API 키가 없으면 Anthropic 클라이언트 빈 생성 단계에서 실패하므로 "키 없이 시트만
+다시 만든다"는 용도로도 쓸 수 없다.
+
+**용처 (둘 다 `--retry-failed` 사용):**
 
 1. **시트 서식 조정** — OCR 결과는 불변인데 열 너비·행 높이·이미지 크기를 여러 번 고친다.
    매 회차마다 Claude를 10번 호출할 이유가 없다
@@ -337,7 +342,7 @@ gid는 시트를 생성해야 알 수 있다. 단일 batchUpdate로는 불가능
   서비스 계정 : dreamtrue-ocr@<project>.iam.gserviceaccount.com
   확인 : 해당 폴더를 위 계정에 '편집자'로 공유했는지 확인하세요.
          조직 정책이 링크 공유를 차단하는 경우 =IMAGE() 렌더링이 불가능합니다.
-  OCR 결과는 output/raw/ 에 보존되었습니다. 권한 수정 후 --skip-ocr 로 재실행하세요.
+  OCR 결과는 output/raw/ 에 보존되었습니다. 권한 수정 후 --retry-failed 로 재실행하세요.
 ```
 
 ### 6.3 재시도
@@ -416,12 +421,11 @@ ocr:
 | `--output` | `./output` | 출력 디렉토리 (캐시·리포트) |
 | `--model` | `claude-opus-5` | 모델 전환 |
 | `--retry-failed` | off | 저장된 결과는 재사용하고 없는 장만 API 호출 |
-| `--skip-ocr` | off | API 호출 금지, 저장된 결과만 사용 |
 
 실행 예:
 
 ```
-./gradlew bootRun --args='--input=./input --skip-ocr'
+./gradlew bootRun --args='--input=./input --retry-failed'
 ```
 
 ## 8. 테스트 전략
@@ -433,7 +437,7 @@ TDD로 진행하며 커버리지 80% 이상을 목표로 한다.
 - `RecordAssembler`: §6.1 실패 조합 4가지가 각각 올바른 셀 문자열을 만드는지
 - `AnalysisComposer`: 특이사항 블록이 항상 생성됨, `eraNote`가 null일 때 생략됨,
   관인 없는 문서가 "확인되지 않음"으로 채워짐
-- `OcrResultStore`: 저장·읽기 왕복, `--skip-ocr`에서 파일이 없을 때 실패 처리
+- `OcrResultStore`: 저장·읽기 왕복, 파일이 없을 때 빈 Optional
 - `SheetLayout`: `IMAGE()`/`HYPERLINK()` 수식 빌더, 셀 좌표 매핑, 가로/세로 문서 크기 인자
 - `BatchReport`: 종료 코드 산출
 
