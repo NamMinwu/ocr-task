@@ -32,8 +32,6 @@ public class ClaudeOcrClient {
     /** Claude API 직접 호출 시 이미지당 base64 상한. */
     private static final long MAX_BASE64_BYTES = 10L * 1024 * 1024;
 
-    private static final int MAX_ATTEMPTS = 3;
-    private static final long BASE_BACKOFF_MS = 1000L;
 
     private final AnthropicClient client;
     private final OcrProperties properties;
@@ -55,25 +53,24 @@ public class ClaudeOcrClient {
         StructuredMessageCreateParams<OcrResult> params =
                 buildParams(image, base64, properties.claude().model(), properties.claude().maxTokens());
 
-        RuntimeException last = null;
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            try {
-                OcrResult result = client.messages().create(params).content().stream()
-                        .flatMap(cb -> cb.text().stream())
-                        .map(t -> t.text())
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalStateException("구조화 출력이 비어 있습니다"));
-                return Outcome.ok(result);
-            } catch (RuntimeException e) {
-                last = e;
-                log.warn("OCR 실패 ({}/{}) {}: {}", attempt, MAX_ATTEMPTS,
-                        image.fileName(), e.getMessage());
-                if (attempt < MAX_ATTEMPTS) {
-                    sleepBackoff(attempt);
-                }
-            }
+        // HTTP 오류(429·5xx)의 재시도와 Retry-After 준수는 SDK 가 수행한다.
+        // 그 위에 루프를 하나 더 두면 호출 횟수가 곱해져 레이트리밋을 악화시킨다.
+        // 그 밖의 실패는 이 장만 격리하고, 재시도는 운영자가 --retry-failed 로 한다.
+        try {
+            return Outcome.ok(callOnce(params));
+        } catch (RuntimeException e) {
+            log.warn("OCR 실패 {}: {}", image.fileName(), e.getMessage());
+            return Outcome.failed(e.getMessage());
         }
-        return Outcome.failed(last == null ? "알 수 없는 오류" : last.getMessage());
+    }
+
+    /** 단일 호출. 재시도하지 않는다는 것을 테스트에서 확인할 수 있도록 분리한다. */
+    OcrResult callOnce(StructuredMessageCreateParams<OcrResult> params) {
+        return client.messages().create(params).content().stream()
+                .flatMap(cb -> cb.text().stream())
+                .map(t -> t.text())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("구조화 출력이 비어 있습니다"));
     }
 
     static void validateSize(SourceImage image) {
@@ -145,13 +142,4 @@ public class ClaudeOcrClient {
         };
     }
 
-    private void sleepBackoff(int attempt) {
-        long delay = BASE_BACKOFF_MS * (1L << (attempt - 1))
-                + (long) (Math.random() * 250);
-        try {
-            Thread.sleep(delay);
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }

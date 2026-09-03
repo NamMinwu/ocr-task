@@ -347,7 +347,11 @@ gid는 시트를 생성해야 알 수 있다. 단일 batchUpdate로는 불가능
 
 ### 6.3 재시도
 
-- Anthropic 429·529·5xx: 지수 백오프 + jitter, `Retry-After` 존중
+- Anthropic 429·5xx: **SDK 에 위임**한다. Anthropic Java SDK 가 재시도하며 `Retry-After`
+  헤더를 존중하므로, 애플리케이션에 백오프 루프를 하나 더 두면 호출 횟수가 곱해져
+  (3×3=9회) 레이트리밋을 악화시킨다. `maxRetries` 만 명시한다.
+- 그 밖의 실패(400, 구조화 출력 없음 등)는 재시도하지 않고 그 장만 격리한다. 대부분
+  같은 요청을 다시 보내도 같은 결과이고, 재시도 수단은 `--retry-failed` 로 이미 있다.
 - 구조화 출력 스키마 위반: 1회 재시도
 - Drive/Sheets 일시적 5xx: 지수 백오프
 
