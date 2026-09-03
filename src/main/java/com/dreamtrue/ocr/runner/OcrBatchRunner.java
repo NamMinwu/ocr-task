@@ -45,7 +45,6 @@ public class OcrBatchRunner implements ApplicationRunner, ExitCodeGenerator {
     public void run(ApplicationArguments args) {
         String inputDir = firstOr(args, "input", properties.inputDir());
         String outputDir = firstOr(args, "output", properties.outputDir());
-        boolean skipOcr = args.containsOption("skip-ocr");
         // 저장된 결과는 재사용하고, 없는 장(= 지난 실행에서 실패한 장)만 다시 호출한다.
         boolean retryFailed = args.containsOption("retry-failed");
 
@@ -56,8 +55,7 @@ public class OcrBatchRunner implements ApplicationRunner, ExitCodeGenerator {
                 log.warn("입력 디렉토리에 이미지가 없습니다: {}", inputDir);
             }
             log.info("이미지 {}장을 처리합니다 ({}){}", images.size(), inputDir,
-                    skipOcr ? " [--skip-ocr: API 호출 없음]"
-                            : retryFailed ? " [--retry-failed: 저장된 결과 재사용]" : "");
+                    retryFailed ? " [--retry-failed: 저장된 결과 재사용]" : "");
 
             OcrResultStore store = new OcrResultStore(Path.of(outputDir));
             DriveImageUploader uploader =
@@ -65,7 +63,7 @@ public class OcrBatchRunner implements ApplicationRunner, ExitCodeGenerator {
 
             List<ArchiveRecord> records = buildRecords(
                     images,
-                    img -> runOcr(img, store, skipOcr, retryFailed),
+                    img -> runOcr(img, store, retryFailed),
                     uploader::upload,
                     properties.folderNumber(),
                     properties.fileNumber());
@@ -106,29 +104,16 @@ public class OcrBatchRunner implements ApplicationRunner, ExitCodeGenerator {
         return records;
     }
 
-    /** 저장된 결과를 재사용해도 되는가. */
-    static boolean useStored(boolean skipOcr, boolean retryFailed, boolean storedPresent) {
-        return storedPresent && (skipOcr || retryFailed);
-    }
-
-    /** 저장된 결과가 없을 때 API를 호출해도 되는가. */
-    static boolean mayCallApi(boolean skipOcr) {
-        return !skipOcr;
-    }
-
     private Outcome<OcrResult> runOcr(SourceImage image, OcrResultStore store,
-                                      boolean skipOcr, boolean retryFailed) {
+                                      boolean retryFailed) {
         try {
             // 기본 모드는 저장 파일을 읽지 않는다. 읽어서 버리면 깨진 JSON 하나가
             // 신선한 실행까지 실패시켜, 캐시를 기본 경로에서 떼어둔 의미가 사라진다.
-            if (readsStore(skipOcr, retryFailed)) {
+            if (retryFailed) {
                 Optional<OcrResult> stored = store.read(image.fileName());
-                if (useStored(skipOcr, retryFailed, stored.isPresent())) {
+                if (stored.isPresent()) {
                     log.info("{}: 저장된 결과를 재사용합니다", image.fileName());
                     return Outcome.ok(stored.get());
-                }
-                if (!mayCallApi(skipOcr)) {
-                    return Outcome.failed("--skip-ocr 이지만 저장된 결과가 없습니다: output/raw/");
                 }
                 log.info("{}: 저장된 결과가 없어 다시 인식합니다", image.fileName());
             } else {
@@ -143,11 +128,6 @@ public class OcrBatchRunner implements ApplicationRunner, ExitCodeGenerator {
         } catch (Exception e) {
             return Outcome.failed(e.getMessage());
         }
-    }
-
-    /** 저장된 결과를 읽어야 하는 모드인가. 기본 모드는 읽지 않는다. */
-    static boolean readsStore(boolean skipOcr, boolean retryFailed) {
-        return skipOcr || retryFailed;
     }
 
     private String firstOr(ApplicationArguments args, String name, String fallback) {

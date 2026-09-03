@@ -107,7 +107,7 @@ class PipelineIntegrationTest {
                 .contains("※ 특이사항:")
                 .contains("붉은색 원형 관인 날인");
 
-        // 결과가 디스크에 남아 --skip-ocr 로 재사용 가능하다
+        // 결과가 디스크에 남아 --retry-failed 로 재사용 가능하다
         assertThat(store.read("img_01.jpg")).contains(OCR);
 
         assertThat(report.exitCode()).isZero();

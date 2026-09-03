@@ -5,8 +5,6 @@ import com.dreamtrue.ocr.domain.OcrResult;
 import com.dreamtrue.ocr.domain.Outcome;
 import com.dreamtrue.ocr.domain.SourceImage;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -63,23 +61,6 @@ class OcrBatchRunnerTest {
         assertThat(records).extracting(ArchiveRecord::detailNumber).containsExactly(1, 2, 3);
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "false,false,true,false,true",   // 기본: 저장된 결과를 무시하고 항상 API 호출
-            "false,false,false,false,true",  // 저장된 결과가 없으면 API 호출
-            "false,true,true,true,true",     // --retry-failed: 저장된 결과는 재사용, 없으면 API 호출
-            "false,true,false,false,true",   // --retry-failed + 저장된 결과 없음: API 호출
-            "true,false,true,true,false",    // --skip-ocr: 저장된 결과는 재사용, API 호출 안 함
-            "true,false,false,false,false",  // --skip-ocr: 저장된 결과 없으면 OCR 실패로 처리
-    })
-    void useStored_진리표(boolean skipOcr, boolean retryFailed, boolean storedPresent,
-                        boolean expectedUseStored, boolean expectedMayCallApi) {
-        assertThat(OcrBatchRunner.useStored(skipOcr, retryFailed, storedPresent))
-                .isEqualTo(expectedUseStored);
-        assertThat(OcrBatchRunner.mayCallApi(skipOcr))
-                .isEqualTo(expectedMayCallApi);
-    }
-
     @Test
     void 갈래별_호출_순서는_OCR_다음_업로드다() {
         List<String> calls = new ArrayList<>();
@@ -93,16 +74,4 @@ class OcrBatchRunnerTest {
         assertThat(calls).containsExactly("ocr:1", "upload:1", "ocr:2", "upload:2");
     }
 
-    @Test
-    void 기본_모드는_저장된_결과를_읽지_않는다() {
-        // 기본 실행은 저장 파일을 무시한다고 설계에 명시되어 있다.
-        // 읽어서 버리면, 깨진 JSON 하나가 신선한 실행까지 실패시킨다.
-        assertThat(OcrBatchRunner.readsStore(false, false)).isFalse();
-    }
-
-    @Test
-    void 재사용_모드에서만_저장된_결과를_읽는다() {
-        assertThat(OcrBatchRunner.readsStore(true, false)).isTrue();   // --skip-ocr
-        assertThat(OcrBatchRunner.readsStore(false, true)).isTrue();   // --retry-failed
-    }
 }
