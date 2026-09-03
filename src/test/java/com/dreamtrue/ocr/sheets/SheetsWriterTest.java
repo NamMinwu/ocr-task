@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 class SheetsWriterTest {
 
@@ -41,11 +42,12 @@ class SheetsWriterTest {
             written.put(sheetTitle, rows);
         }
 
-        List<Integer> failedRows = List.of();
+        Map<Integer, SheetsGateway.RowMark> marks = Map.of();
 
         @Override
-        public void applyFormatting(Map<String, Integer> gids, List<Integer> failedIndexRows) {
-            this.failedRows = failedIndexRows;
+        public void applyFormatting(Map<String, Integer> gids,
+                                   Map<Integer, SheetsGateway.RowMark> markedRows) {
+            this.marks = markedRows;
             calls.add("format");
         }
 
@@ -133,23 +135,56 @@ class SheetsWriterTest {
                 Outcome.failed("400 Bad Request"));
     }
 
-    @Test
-    void 실패한_레코드의_목록_행_번호가_서식에_전달된다() {
-        FakeSheets fake = new FakeSheets();
+    private ArchiveRecord ocrFailed(int detail) {
+        return new ArchiveRecord(1, 1, detail, Path.of("input/img_0" + detail + ".jpg"),
+                Outcome.failed("401 authentication_error"),
+                Outcome.ok("https://x/" + detail));
+    }
 
-        // 0행은 헤더. 1행=1번, 2행=2번(실패), 3행=3번
-        new SheetsWriter(fake).write(
-                List.of(record(1), photoFailed(2), record(3)), Map.of());
-
-        assertThat(fake.failedRows).containsExactly(2);
+    private ArchiveRecord bothFailed(int detail) {
+        return new ArchiveRecord(1, 1, detail, Path.of("input/img_0" + detail + ".jpg"),
+                Outcome.failed("401"), Outcome.failed("400"));
     }
 
     @Test
-    void 전부_성공하면_강조할_행이_없다() {
+    void 업로드가_실패한_행을_표시한다() {
+        FakeSheets fake = new FakeSheets();
+
+        // 0행은 헤더. 1행=1번, 2행=2번(업로드 실패), 3행=3번
+        new SheetsWriter(fake).write(
+                List.of(record(1), photoFailed(2), record(3)), Map.of());
+
+        assertThat(fake.marks).containsExactly(
+                entry(2, SheetsGateway.RowMark.UPLOAD_FAILED));
+    }
+
+    @Test
+    void OCR이_실패한_행은_다른_표시를_쓴다() {
+        FakeSheets fake = new FakeSheets();
+
+        new SheetsWriter(fake).write(List.of(record(1), ocrFailed(2)), Map.of());
+
+        assertThat(fake.marks).containsExactly(
+                entry(2, SheetsGateway.RowMark.OCR_FAILED));
+    }
+
+    @Test
+    void 둘_다_실패하면_OCR_실패로_표시한다() {
+        // 전사가 아예 없는 쪽이 더 근본적인 결손이다.
+        FakeSheets fake = new FakeSheets();
+
+        new SheetsWriter(fake).write(List.of(bothFailed(1)), Map.of());
+
+        assertThat(fake.marks).containsExactly(
+                entry(1, SheetsGateway.RowMark.OCR_FAILED));
+    }
+
+    @Test
+    void 전부_성공하면_표시할_행이_없다() {
         FakeSheets fake = new FakeSheets();
 
         new SheetsWriter(fake).write(List.of(record(1), record(2)), Map.of());
 
-        assertThat(fake.failedRows).isEmpty();
+        assertThat(fake.marks).isEmpty();
     }
 }

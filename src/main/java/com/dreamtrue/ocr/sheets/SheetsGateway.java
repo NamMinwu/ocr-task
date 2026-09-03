@@ -15,11 +15,14 @@ public interface SheetsGateway {
     /** USER_ENTERED 로 기록한다. 수식으로 해석되어야 한다. */
     void writeValues(String sheetTitle, List<List<Object>> rows);
 
+    /** 목록 시트에서 행을 어떻게 표시할지. 두 갈래 중 어느 쪽이 실패했는지 구분한다. */
+    enum RowMark { OCR_FAILED, UPLOAD_FAILED }
+
     /**
-     * @param failedIndexRows 목록 시트에서 강조할 행 번호(0-based, 0은 헤더).
-     *                        목록만 보고도 어느 레코드가 불완전한지 알 수 있어야 한다.
+     * @param markedRows 목록 시트의 행 번호(0-based, 0은 헤더) → 표시 종류.
+     *                   목록만 보고도 어느 레코드의 어느 절반이 비었는지 알 수 있어야 한다.
      */
-    void applyFormatting(Map<String, Integer> gids, List<Integer> failedIndexRows);
+    void applyFormatting(Map<String, Integer> gids, Map<Integer, RowMark> markedRows);
 
     String spreadsheetUrl();
 }
