@@ -96,7 +96,7 @@ public class GoogleSheetsGateway implements SheetsGateway {
 
     @Override
     @SneakyThrows
-    public void applyFormatting(Map<String, Integer> gids) {
+    public void applyFormatting(Map<String, Integer> gids, List<Integer> failedIndexRows) {
         List<Request> requests = new ArrayList<>();
         for (Map.Entry<String, Integer> e : gids.entrySet()) {
             int gid = e.getValue();
@@ -112,12 +112,31 @@ public class GoogleSheetsGateway implements SheetsGateway {
             requests.add(wrapText(gid, ANALYSIS_ROW));
             requests.add(rowHeight(gid, PHOTO_ROW, 620));
         }
+
+        // 목록만 보고도 불완전한 레코드를 알 수 있게 한다.
+        // 평가양식이 4열로 정해져 있어 열을 늘리지 않고 배경색으로만 표시한다.
+        int indexGid = gids.get(SheetLayout.INDEX_SHEET);
+        for (int row : failedIndexRows) {
+            requests.add(highlightRow(indexGid, row));
+        }
         batch(requests);
     }
 
     @Override
     public String spreadsheetUrl() {
         return "https://docs.google.com/spreadsheets/d/" + spreadsheetId();
+    }
+
+    /** 실패한 레코드의 목록 행에 옅은 붉은 배경을 깐다. */
+    private Request highlightRow(int gid, int rowIndex) {
+        return new Request().setRepeatCell(new RepeatCellRequest()
+                .setRange(new GridRange().setSheetId(gid)
+                        .setStartRowIndex(rowIndex).setEndRowIndex(rowIndex + 1)
+                        .setStartColumnIndex(0).setEndColumnIndex(4))
+                .setCell(new CellData().setUserEnteredFormat(new CellFormat()
+                        .setBackgroundColor(new Color()
+                                .setRed(0.98f).setGreen(0.87f).setBlue(0.85f))))
+                .setFields("userEnteredFormat.backgroundColor"));
     }
 
     private Request columnWidth(int gid, int columnIndex, int pixels) {

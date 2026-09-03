@@ -41,8 +41,11 @@ class SheetsWriterTest {
             written.put(sheetTitle, rows);
         }
 
+        List<Integer> failedRows = List.of();
+
         @Override
-        public void applyFormatting(Map<String, Integer> gids) {
+        public void applyFormatting(Map<String, Integer> gids, List<Integer> failedIndexRows) {
+            this.failedRows = failedIndexRows;
             calls.add("format");
         }
 
@@ -121,5 +124,32 @@ class SheetsWriterTest {
             if (calls.get(i).startsWith(prefix)) return i;
         }
         return -1;
+    }
+
+    private ArchiveRecord photoFailed(int detail) {
+        return new ArchiveRecord(1, 1, detail, Path.of("input/img_0" + detail + ".jpg"),
+                Outcome.ok(new OcrResult("제목" + detail, "본문", "종류", "상태",
+                        "없음", "확인되지 않음", null)),
+                Outcome.failed("400 Bad Request"));
+    }
+
+    @Test
+    void 실패한_레코드의_목록_행_번호가_서식에_전달된다() {
+        FakeSheets fake = new FakeSheets();
+
+        // 0행은 헤더. 1행=1번, 2행=2번(실패), 3행=3번
+        new SheetsWriter(fake).write(
+                List.of(record(1), photoFailed(2), record(3)), Map.of());
+
+        assertThat(fake.failedRows).containsExactly(2);
+    }
+
+    @Test
+    void 전부_성공하면_강조할_행이_없다() {
+        FakeSheets fake = new FakeSheets();
+
+        new SheetsWriter(fake).write(List.of(record(1), record(2)), Map.of());
+
+        assertThat(fake.failedRows).isEmpty();
     }
 }
