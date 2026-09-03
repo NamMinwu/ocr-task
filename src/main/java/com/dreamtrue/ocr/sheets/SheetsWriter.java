@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,14 +34,17 @@ public class SheetsWriter {
         List<List<Object>> indexRows = new ArrayList<>();
         indexRows.add(SheetLayout.indexHeader());
 
-        // 목록 시트에서 강조할 행. 0행이 헤더이므로 첫 레코드는 1행이다.
-        List<Integer> failedIndexRows = new ArrayList<>();
+        // 목록 시트에서 표시할 행. 0행이 헤더이므로 첫 레코드는 1행이다.
+        Map<Integer, SheetsGateway.RowMark> markedRows = new LinkedHashMap<>();
 
         List<Runnable> detailWrites = new ArrayList<>();
         for (ArchiveRecord r : records) {
             RecordAssembler.Cells cells = RecordAssembler.assemble(r);
-            if (!r.ocr().isOk() || !r.photoUrl().isOk()) {
-                failedIndexRows.add(indexRows.size());
+            // 둘 다 실패했으면 OCR 쪽으로 표시한다. 전사가 아예 없는 편이 더 근본적인 결손이다.
+            if (!r.ocr().isOk()) {
+                markedRows.put(indexRows.size(), SheetsGateway.RowMark.OCR_FAILED);
+            } else if (!r.photoUrl().isOk()) {
+                markedRows.put(indexRows.size(), SheetsGateway.RowMark.UPLOAD_FAILED);
             }
             int detailGid = gids.get(r.sheetName());
             indexRows.add(SheetLayout.indexRow(r, detailGid, cells.title()));
@@ -53,7 +57,7 @@ public class SheetsWriter {
         gateway.writeValues(SheetLayout.INDEX_SHEET, indexRows);
         detailWrites.forEach(Runnable::run);
 
-        gateway.applyFormatting(gids, failedIndexRows);
+        gateway.applyFormatting(gids, markedRows);
 
         return gateway.spreadsheetUrl();
     }

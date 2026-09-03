@@ -96,7 +96,7 @@ public class GoogleSheetsGateway implements SheetsGateway {
 
     @Override
     @SneakyThrows
-    public void applyFormatting(Map<String, Integer> gids, List<Integer> failedIndexRows) {
+    public void applyFormatting(Map<String, Integer> gids, Map<Integer, RowMark> markedRows) {
         List<Request> requests = new ArrayList<>();
         for (Map.Entry<String, Integer> e : gids.entrySet()) {
             int gid = e.getValue();
@@ -116,9 +116,7 @@ public class GoogleSheetsGateway implements SheetsGateway {
         // 목록만 보고도 불완전한 레코드를 알 수 있게 한다.
         // 평가양식이 4열로 정해져 있어 열을 늘리지 않고 배경색으로만 표시한다.
         int indexGid = gids.get(SheetLayout.INDEX_SHEET);
-        for (int row : failedIndexRows) {
-            requests.add(highlightRow(indexGid, row));
-        }
+        markedRows.forEach((row, mark) -> requests.add(highlightRow(indexGid, row, mark)));
         batch(requests);
     }
 
@@ -127,15 +125,21 @@ public class GoogleSheetsGateway implements SheetsGateway {
         return "https://docs.google.com/spreadsheets/d/" + spreadsheetId();
     }
 
-    /** 실패한 레코드의 목록 행에 옅은 붉은 배경을 깐다. */
-    private Request highlightRow(int gid, int rowIndex) {
+    /**
+     * 실패한 레코드의 목록 행에 배경색을 깐다.
+     * 전사가 없는 쪽(OCR)은 붉게, 사진이 없는 쪽(업로드)은 호박색으로 구분한다.
+     */
+    private Request highlightRow(int gid, int rowIndex, RowMark mark) {
+        Color color = switch (mark) {
+            case OCR_FAILED    -> new Color().setRed(0.97f).setGreen(0.83f).setBlue(0.82f);
+            case UPLOAD_FAILED -> new Color().setRed(1.00f).setGreen(0.93f).setBlue(0.76f);
+        };
         return new Request().setRepeatCell(new RepeatCellRequest()
                 .setRange(new GridRange().setSheetId(gid)
                         .setStartRowIndex(rowIndex).setEndRowIndex(rowIndex + 1)
                         .setStartColumnIndex(0).setEndColumnIndex(4))
                 .setCell(new CellData().setUserEnteredFormat(new CellFormat()
-                        .setBackgroundColor(new Color()
-                                .setRed(0.98f).setGreen(0.87f).setBlue(0.85f))))
+                        .setBackgroundColor(color)))
                 .setFields("userEnteredFormat.backgroundColor"));
     }
 
