@@ -55,8 +55,8 @@ public final class BatchReport {
                 sb.append("    %-14s 세부번호 %-3d %s (%s)%n"
                         .formatted(f.fileName(), f.detailNumber(), f.what(), f.reason()));
             }
-            sb.append("%n  실패한 항목만 다시 시도:%n");
-            sb.append("    ./gradlew bootRun --args='--retry-failed'%n");
+            sb.append("%n  실패한 항목만 다시 시도:%n".formatted());
+            sb.append("    ./gradlew bootRun --args='--retry-failed'%n".formatted());
         }
         sb.append("%n  시트: %s%n".formatted(spreadsheetUrl));
         return sb.toString();

@@ -76,4 +76,14 @@ class BatchReportTest {
 
         assertThat(r.render()).contains("https://docs.google.com/spreadsheets/d/X");
     }
+
+    @Test
+    void 출력에_서식_문자가_그대로_남지_않는다() {
+        // append(String) 에 %n 을 넣으면 formatted() 를 거치지 않아 리터럴로 새어 나간다.
+        String rendered = BatchReport.of(
+                List.of(ok(1), photoFailed(3, "503 backendError")), "https://sheet").render();
+
+        assertThat(rendered).doesNotContain("%n");
+        assertThat(rendered.lines().anyMatch(l -> l.contains("--retry-failed"))).isTrue();
+    }
 }
