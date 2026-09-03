@@ -201,5 +201,3 @@ OCR 결과는 항상 `<--output>/raw/`에 저장됩니다 (기본값: `output/ra
 | `domain` | 도메인 타입, 분석 내용 조립, 실패 조합 처리 |
 | `report` | 요약 출력, 종료 코드 |
 | `runner` | 전체 배선 |
-
-설계 근거는 `docs/superpowers/specs/2026-09-03-archive-ocr-design.md`에 있습니다.
