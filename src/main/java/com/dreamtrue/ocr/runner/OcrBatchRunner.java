@@ -131,11 +131,6 @@ public class OcrBatchRunner implements ApplicationRunner, ExitCodeGenerator {
                 return Outcome.failed("--skip-ocr 이지만 저장된 결과가 없습니다: output/raw/");
             }
 
-            if (storedPresent && retryFailed) {
-                log.info("{}: 저장된 결과가 있어 스킵합니다", image.fileName());
-                return Outcome.ok(stored.get());
-            }
-
             // API 호출
             log.info("{}: 저장된 결과가 없어 다시 인식합니다", image.fileName());
             Outcome<OcrResult> result = claude.ocr(image);

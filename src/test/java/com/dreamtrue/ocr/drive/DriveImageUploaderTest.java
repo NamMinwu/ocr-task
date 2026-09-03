@@ -114,4 +114,18 @@ class DriveImageUploaderTest {
                 .isInstanceOf(SystemicFailureException.class);
         assertThat(drive.calls).hasSize(1);
     }
+
+    @Test
+    void 폴더404_메시지는_공유가_아닌_폴더ID_확인을_조언한다(@TempDir Path dir) throws IOException {
+        Path p = dir.resolve("img_03.jpg");
+        Files.write(p, new byte[10]);
+        FakeDrive drive = new FakeDrive();
+        drive.toThrow = httpError(404, "notFound");
+        var uploader = new DriveImageUploader(drive, "FOLDER1");
+
+        assertThatThrownBy(() -> uploader.upload(image(p)))
+                .isInstanceOf(SystemicFailureException.class)
+                .hasMessageContaining("FOLDER1")
+                .hasMessageNotContaining("편집자");
+    }
 }

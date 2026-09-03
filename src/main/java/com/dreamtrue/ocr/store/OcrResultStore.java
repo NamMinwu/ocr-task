@@ -1,9 +1,9 @@
 package com.dreamtrue.ocr.store;
 
 import com.dreamtrue.ocr.domain.OcrResult;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -28,9 +28,9 @@ public class OcrResultStore {
 
     public OcrResultStore(Path outputDir) {
         this.rawDir = outputDir.resolve("raw");
-        this.mapper = new ObjectMapper()
+        this.mapper = JsonMapper.builder()
                 .enable(SerializationFeature.INDENT_OUTPUT)
-                .setSerializationInclusion(JsonInclude.Include.ALWAYS);
+                .build();
     }
 
     public void write(String fileName, String model, OcrResult result) throws IOException {

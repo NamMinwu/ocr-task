@@ -80,13 +80,17 @@ public class DriveImageUploader {
     }
 
     private String systemicMessage(GoogleJsonResponseException e) {
+        String advice = e.getStatusCode() == 404
+                ? "폴더 ID가 올바른지 확인하세요. 폴더가 존재하고 URL에서 ID를 올바르게 복사했는지 확인하세요."
+                : "해당 폴더를 서비스 계정 이메일에 '편집자'로 공유했는지 확인하세요.\n" +
+                  "조직 정책이 링크 공유를 차단하는 경우 =IMAGE() 렌더링이 불가능합니다.";
+
         return """
                 Drive 업로드 권한 오류 (%d %s)
                   폴더 ID : %s
-                  확인 : 해당 폴더를 서비스 계정 이메일에 '편집자'로 공유했는지 확인하세요.
-                         조직 정책이 링크 공유를 차단하는 경우 =IMAGE() 렌더링이 불가능합니다.
+                  확인 : %s
                   OCR 결과는 output/raw/ 에 보존되었습니다. 권한 수정 후 --skip-ocr 로 재실행하세요."""
-                .formatted(e.getStatusCode(), e.getStatusMessage(), folderId);
+                .formatted(e.getStatusCode(), e.getStatusMessage(), folderId, advice);
     }
 
     private void sleepBackoff(int attempt) {

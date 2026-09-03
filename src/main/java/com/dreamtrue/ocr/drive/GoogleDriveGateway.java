@@ -1,6 +1,5 @@
 package com.dreamtrue.ocr.drive;
 
-import com.dreamtrue.ocr.config.OcrProperties;
 import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
