@@ -33,9 +33,15 @@ public class SheetsWriter {
         List<List<Object>> indexRows = new ArrayList<>();
         indexRows.add(SheetLayout.indexHeader());
 
+        // 목록 시트에서 강조할 행. 0행이 헤더이므로 첫 레코드는 1행이다.
+        List<Integer> failedIndexRows = new ArrayList<>();
+
         List<Runnable> detailWrites = new ArrayList<>();
         for (ArchiveRecord r : records) {
             RecordAssembler.Cells cells = RecordAssembler.assemble(r);
+            if (!r.ocr().isOk() || !r.photoUrl().isOk()) {
+                failedIndexRows.add(indexRows.size());
+            }
             int detailGid = gids.get(r.sheetName());
             indexRows.add(SheetLayout.indexRow(r, detailGid, cells.title()));
 
@@ -47,7 +53,7 @@ public class SheetsWriter {
         gateway.writeValues(SheetLayout.INDEX_SHEET, indexRows);
         detailWrites.forEach(Runnable::run);
 
-        gateway.applyFormatting(gids);
+        gateway.applyFormatting(gids, failedIndexRows);
 
         return gateway.spreadsheetUrl();
     }

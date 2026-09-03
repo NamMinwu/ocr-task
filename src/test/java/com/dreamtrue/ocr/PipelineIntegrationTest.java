@@ -40,7 +40,7 @@ class PipelineIntegrationTest {
             written.put(title, rows);
         }
 
-        @Override public void applyFormatting(Map<String, Integer> gids) {}
+        @Override public void applyFormatting(Map<String, Integer> gids, List<Integer> failedIndexRows) {}
 
         @Override public String spreadsheetUrl() {
             return "https://docs.google.com/spreadsheets/d/TEST";

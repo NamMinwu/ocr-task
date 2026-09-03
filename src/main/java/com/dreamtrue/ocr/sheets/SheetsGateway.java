@@ -15,7 +15,11 @@ public interface SheetsGateway {
     /** USER_ENTERED 로 기록한다. 수식으로 해석되어야 한다. */
     void writeValues(String sheetTitle, List<List<Object>> rows);
 
-    void applyFormatting(Map<String, Integer> gids);
+    /**
+     * @param failedIndexRows 목록 시트에서 강조할 행 번호(0-based, 0은 헤더).
+     *                        목록만 보고도 어느 레코드가 불완전한지 알 수 있어야 한다.
+     */
+    void applyFormatting(Map<String, Integer> gids, List<Integer> failedIndexRows);
 
     String spreadsheetUrl();
 }
