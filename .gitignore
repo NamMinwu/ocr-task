@@ -19,3 +19,6 @@ application-local.yml
 
 # 데모 시나리오 백업
 .demo-backup/
+
+# 설계 문서 (로컬 보관)
+docs/
