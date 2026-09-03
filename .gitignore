@@ -16,3 +16,6 @@ output/
 
 # 로컬 설정 (키·ID)
 application-local.yml
+
+# 데모 시나리오 백업
+.demo-backup/

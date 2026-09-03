@@ -2,10 +2,8 @@
 #
 # 영상 촬영용 실패 시나리오 세팅 스크립트
 #
-#   ./demo.sh break-image   한 장만 실패하는 상태로 만든다 (개별 실패)
-#   ./demo.sh break-key     API 호출이 실패하는 상태로 만든다 (개별 실패)
+#   ./demo.sh break-key     OCR 이 실패하는 상태로 만든다
 #   ./demo.sh break-upload  OCR 은 성공하고 업로드만 실패하는 상태로 만든다
-#   ./demo.sh break-drive   설정 오류로 즉시 중단되는 상태로 만든다 (계통 실패)
 #   ./demo.sh restore       원래대로 되돌린다
 #   ./demo.sh status        지금 무엇이 망가져 있는지 보여준다
 #
@@ -54,27 +52,6 @@ need_clean() {
 
 case "${1:-}" in
 
-# ─────────────────────────────────────────────────────────────
-break-image)
-  need_clean
-  [ -f "input/$TARGET" ] || { warn "input/$TARGET 이 없습니다"; exit 1; }
-  mkdir -p "$BACKUP"
-
-  cp "input/$TARGET" "$BACKUP/$TARGET"
-  [ -f "output/raw/${TARGET%.*}.json" ] && cp "output/raw/${TARGET%.*}.json" "$BACKUP/" || true
-
-  # 장변을 2576px 상한 위로 키운다 → ClaudeOcrClient.validateSize 가 거부한다.
-  sips -Z 3200 "input/$TARGET" --out "input/$TARGET" >/dev/null 2>&1
-  # 저장된 결과를 지워야 --retry-failed 가 이 장을 실제로 다시 시도한다.
-  rm -f "output/raw/${TARGET%.*}.json"
-
-  dim=$(sips -g pixelWidth -g pixelHeight "input/$TARGET" | awk '/pixel/{printf "%s ", $2}')
-  step "개별 실패 세팅 완료"
-  ok "input/$TARGET 을 ${dim}으로 확대 (장변 상한 2576px 초과)"
-  ok "output/raw/${TARGET%.*}.json 제거 — 재시도가 이 장을 다시 부르도록"
-  run_batch
-  after_run
-  ;;
 
 # ─────────────────────────────────────────────────────────────
 break-key)
@@ -128,24 +105,6 @@ break-upload)
   after_run
   ;;
 
-# ─────────────────────────────────────────────────────────────
-break-drive)
-  need_clean
-  [ -f "$CONFIG" ] || { warn "$CONFIG 이 없습니다"; exit 1; }
-  mkdir -p "$BACKUP"
-  cp "$CONFIG" "$BACKUP/$CONFIG"
-
-  # 존재하지 않는 폴더 ID → Drive 가 404 → 계통 실패로 즉시 중단
-  /usr/bin/sed -i '' \
-    's|^\( *drive-folder-id: *\).*|\1"1DEMOnonexistentFolderIdForVideo0000"|' "$CONFIG"
-
-  step "계통 실패 세팅 완료"
-  ok "drive-folder-id 를 존재하지 않는 값으로 교체"
-  run_batch
-  say ""
-  say "  ${c_dim}첫 장에서 즉시 중단됩니다 — 시트에는 도달하지 않습니다.${c_off}"
-  after_run
-  ;;
 
 # ─────────────────────────────────────────────────────────────
 restore)
@@ -175,48 +134,14 @@ restore)
   ok "원래 상태로 되돌렸습니다."
   ;;
 
-# ─────────────────────────────────────────────────────────────
-status)
-  step "현재 상태"
-  if [ -d "$BACKUP" ]; then
-    warn "실패 시나리오가 세팅되어 있습니다 (보관: $BACKUP/)"
-    ls "$BACKUP" | sed 's/^/    /'
-  else
-    ok "정상 상태"
-  fi
-  say ""
-  say "${c_dim}입력 이미지${c_off}"
-  for f in input/*.jpg; do
-    d=$(sips -g pixelWidth -g pixelHeight "$f" 2>/dev/null | awk '/pixelWidth/{w=$2}/pixelHeight/{h=$2}END{printf "%sx%s", w, h}')
-    long=$(( ${d%x*} > ${d#*x} ? ${d%x*} : ${d#*x} ))
-    mark=""; [ "$long" -gt 2576 ] && mark=" ${c_red}← 장변 상한 초과${c_off}"
-    printf '    %-14s %s%s\n' "$(basename "$f")" "$d" "$mark"
-  done
-  say ""
-  say "${c_dim}저장된 OCR 결과${c_off}"
-  printf '    %s개' "$(ls output/raw 2>/dev/null | wc -l | tr -d ' ')"
-  missing=""
-  for f in input/*.jpg; do
-    b=$(basename "${f%.*}")
-    [ -f "output/raw/$b.json" ] || missing="$missing $b"
-  done
-  [ -n "$missing" ] && printf ' %s(없음:%s)%s' "$c_red" "$missing" "$c_off"
-  say ""
-  say ""
-  say "${c_dim}Drive 폴더 ID${c_off}"
-  grep -E "^ *drive-folder-id" "$CONFIG" 2>/dev/null | sed 's/^/    /' || say "    (설정 없음)"
-  ;;
 
 # ─────────────────────────────────────────────────────────────
 *)
   say "영상 촬영용 실패 시나리오 세팅"
   say ""
-  say "  ${c_bold}./demo.sh break-image${c_off} [파일명]   한 장만 실패 (기본: img_03.jpg)"
-  say "  ${c_bold}./demo.sh break-key${c_off}   [파일명]     API 호출 실패 (기본: img_03.jpg)"
-  say "  ${c_bold}./demo.sh break-upload${c_off} [파일명]    OCR 성공 · 업로드 실패 (기본: img_03.jpg)"
-  say "  ${c_bold}./demo.sh break-drive${c_off}            설정 오류로 즉시 중단"
+  say "  ${c_bold}./demo.sh break-key${c_off}    [파일명]    OCR 실패 — 전사가 비고 사진은 남음"
+  say "  ${c_bold}./demo.sh break-upload${c_off} [파일명]    업로드 실패 — 전사는 남고 사진이 빔"
   say "  ${c_bold}./demo.sh restore${c_off}                원래대로 되돌리기"
-  say "  ${c_bold}./demo.sh status${c_off}                 현재 상태 확인"
   exit 1
   ;;
 esac
