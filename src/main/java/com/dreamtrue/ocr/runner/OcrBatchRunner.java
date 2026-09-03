@@ -119,20 +119,22 @@ public class OcrBatchRunner implements ApplicationRunner, ExitCodeGenerator {
     private Outcome<OcrResult> runOcr(SourceImage image, OcrResultStore store,
                                       boolean skipOcr, boolean retryFailed) {
         try {
-            Optional<OcrResult> stored = store.read(image.fileName());
-            boolean storedPresent = stored.isPresent();
-
-            if (useStored(skipOcr, retryFailed, storedPresent)) {
-                log.info("{}: 저장된 결과를 재사용합니다", image.fileName());
-                return Outcome.ok(stored.get());
+            // 기본 모드는 저장 파일을 읽지 않는다. 읽어서 버리면 깨진 JSON 하나가
+            // 신선한 실행까지 실패시켜, 캐시를 기본 경로에서 떼어둔 의미가 사라진다.
+            if (readsStore(skipOcr, retryFailed)) {
+                Optional<OcrResult> stored = store.read(image.fileName());
+                if (useStored(skipOcr, retryFailed, stored.isPresent())) {
+                    log.info("{}: 저장된 결과를 재사용합니다", image.fileName());
+                    return Outcome.ok(stored.get());
+                }
+                if (!mayCallApi(skipOcr)) {
+                    return Outcome.failed("--skip-ocr 이지만 저장된 결과가 없습니다: output/raw/");
+                }
+                log.info("{}: 저장된 결과가 없어 다시 인식합니다", image.fileName());
+            } else {
+                log.info("{}: 인식 중", image.fileName());
             }
 
-            if (!mayCallApi(skipOcr)) {
-                return Outcome.failed("--skip-ocr 이지만 저장된 결과가 없습니다: output/raw/");
-            }
-
-            // API 호출
-            log.info("{}: 저장된 결과가 없어 다시 인식합니다", image.fileName());
             Outcome<OcrResult> result = claude.ocr(image);
             if (result instanceof Outcome.Ok<OcrResult> ok) {
                 store.write(image.fileName(), properties.claude().model(), ok.value());
@@ -141,6 +143,11 @@ public class OcrBatchRunner implements ApplicationRunner, ExitCodeGenerator {
         } catch (Exception e) {
             return Outcome.failed(e.getMessage());
         }
+    }
+
+    /** 저장된 결과를 읽어야 하는 모드인가. 기본 모드는 읽지 않는다. */
+    static boolean readsStore(boolean skipOcr, boolean retryFailed) {
+        return skipOcr || retryFailed;
     }
 
     private String firstOr(ApplicationArguments args, String name, String fallback) {

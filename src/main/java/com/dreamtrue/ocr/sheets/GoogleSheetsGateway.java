@@ -17,6 +17,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class GoogleSheetsGateway implements SheetsGateway {
 
+    /** 재생성 도중 시트 개수가 0이 되지 않도록 남겨 두는 임시 시트 이름. */
+    private static final String PLACEHOLDER_SHEET = "_재생성중";
+
     private static final int ANALYSIS_ROW = 5; // 0-based, "분석(내용)"
     private static final int PHOTO_ROW = 6;    // 0-based, "사진"
 
@@ -31,14 +34,23 @@ public class GoogleSheetsGateway implements SheetsGateway {
     public void deleteAllSheetsExceptOne() {
         Spreadsheet ss = sheets.spreadsheets().get(spreadsheetId()).execute();
         List<Sheet> existing = ss.getSheets();
-        if (existing.size() <= 1) {
-            return;
-        }
+
         List<Request> requests = new ArrayList<>();
         for (int i = 1; i < existing.size(); i++) {
             requests.add(new Request().setDeleteSheet(
                     new DeleteSheetRequest().setSheetId(existing.get(i).getProperties().getSheetId())));
         }
+
+        // 스프레드시트는 시트가 최소 하나 있어야 하므로 첫 시트는 지울 수 없다.
+        // 그 이름이 이번에 만들 이름(예: '목록')과 겹치면 addSheet 가 중복으로 거부되므로,
+        // 겹치지 않는 임시 이름으로 바꿔 둔다. createSheets 가 마지막에 이 시트를 지운다.
+        SheetProperties survivor = existing.getFirst().getProperties();
+        requests.add(new Request().setUpdateSheetProperties(new UpdateSheetPropertiesRequest()
+                .setProperties(new SheetProperties()
+                        .setSheetId(survivor.getSheetId())
+                        .setTitle(PLACEHOLDER_SHEET))
+                .setFields("title")));
+
         batch(requests);
     }
 

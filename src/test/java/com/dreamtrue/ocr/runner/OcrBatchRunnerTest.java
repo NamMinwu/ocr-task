@@ -92,4 +92,17 @@ class OcrBatchRunnerTest {
 
         assertThat(calls).containsExactly("ocr:1", "upload:1", "ocr:2", "upload:2");
     }
+
+    @Test
+    void 기본_모드는_저장된_결과를_읽지_않는다() {
+        // 기본 실행은 저장 파일을 무시한다고 설계에 명시되어 있다.
+        // 읽어서 버리면, 깨진 JSON 하나가 신선한 실행까지 실패시킨다.
+        assertThat(OcrBatchRunner.readsStore(false, false)).isFalse();
+    }
+
+    @Test
+    void 재사용_모드에서만_저장된_결과를_읽는다() {
+        assertThat(OcrBatchRunner.readsStore(true, false)).isTrue();   // --skip-ocr
+        assertThat(OcrBatchRunner.readsStore(false, true)).isTrue();   // --retry-failed
+    }
 }
