@@ -1,14 +1,14 @@
 package com.dreamtrue.ocr;
 
-import lombok.extern.slf4j.Slf4j;
+import com.dreamtrue.ocr.config.OcrProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-@Slf4j
 @SpringBootApplication
+@EnableConfigurationProperties(OcrProperties.class)
 public class OcrApplication {
     public static void main(String[] args) {
-        log.info("archive-ocr 시작");
-        SpringApplication.run(OcrApplication.class, args);
+        System.exit(SpringApplication.exit(SpringApplication.run(OcrApplication.class, args)));
     }
 }

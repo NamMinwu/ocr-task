@@ -1,0 +1,23 @@
+spring:
+  main:
+    web-application-type: none
+    banner-mode: "off"
+logging:
+  pattern:
+    console: "%d{HH:mm:ss} %-5level %msg%n"
+  level:
+    root: WARN
+    com.dreamtrue.ocr: INFO
+
+ocr:
+  input-dir: ./input
+  output-dir: ./output
+  folder-number: 1
+  file-number: 1
+  claude:
+    model: claude-opus-5
+    max-tokens: 16000
+  google:
+    credentials-path: ./credentials/service-account.json
+    spreadsheet-id: ""
+    drive-folder-id: ""
