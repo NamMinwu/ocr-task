@@ -26,7 +26,28 @@ input/*.jpg
 
 ## 준비
 
+설정값은 모두 저장소 루트의 `application-local.yml` 한 파일에 넣습니다.
+이 파일은 `.gitignore` 대상이라 커밋되지 않습니다.
+
+```bash
+cp application-example.yml application-local.yml
+```
+
+아래 절차를 따라가며 이 파일의 빈 칸을 채우면 됩니다.
+
 ### 1. Anthropic API 키
+
+[console.anthropic.com](https://console.anthropic.com) → Settings → API Keys 에서
+발급한 뒤 `application-local.yml` 에 넣습니다.
+
+```yaml
+ocr:
+  claude:
+    api-key: "sk-ant-..."
+```
+
+환경변수 방식도 그대로 지원합니다. `api-key` 를 비워 두면
+`ANTHROPIC_API_KEY` 환경변수를 읽습니다.
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -54,10 +75,9 @@ export ANTHROPIC_API_KEY=sk-ant-...
 2. Google Drive에 폴더를 만들고, 같은 서비스 계정 이메일을 **편집자**로 추가합니다.
    URL의 `folders/` 뒤 문자열이 폴더 ID입니다.
 
-### 4. 설정 파일
+### 4. 설정 파일 정리
 
-`application-example.yml`을 참고해 `src/main/resources/application.yml`의
-아래 두 값을 채웁니다.
+3단계에서 얻은 두 ID 를 `application-local.yml` 에 넣습니다.
 
 ```yaml
 ocr:
@@ -65,6 +85,22 @@ ocr:
     spreadsheet-id: "여기에_스프레드시트_ID"
     drive-folder-id: "여기에_폴더_ID"
 ```
+
+최종적으로 `application-local.yml` 은 이런 모습이 됩니다.
+
+```yaml
+ocr:
+  claude:
+    api-key: "sk-ant-..."
+  google:
+    credentials-path: ./credentials/service-account.json
+    spreadsheet-id: "1AbC...xYz"
+    drive-folder-id: "1DeF...uVw"
+```
+
+`src/main/resources/application.yml` 은 손대지 않아도 됩니다. 그 파일은 기본값만
+담고 있고, `application-local.yml` 이 있으면 해당 값들을 덮어씁니다. 파일이 없으면
+무시되므로, 환경변수만으로 실행해도 동작합니다.
 
 ## 실행
 
@@ -161,6 +197,10 @@ Drive가 썸네일을 생성하는 데 시간이 걸릴 수 있습니다. 잠시
 
 **`ocr.google.spreadsheet-id 가 비어 있습니다`**
 `src/main/resources/application.yml`에 스프레드시트 ID를 넣지 않았습니다.
+
+**설정한 값이 반영되지 않음**
+`application-local.yml` 이 저장소 루트(`build.gradle` 과 같은 위치)에 있는지
+확인하세요. `src/main/resources/` 안이 아닙니다. 파일명 오타도 흔한 원인입니다.
 
 **`서비스 계정 키 파일을 찾을 수 없습니다`**
 `credentials/service-account.json` 경로를 확인하세요.

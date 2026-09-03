@@ -13,3 +13,6 @@ output/
 
 # SDD 작업 공간
 .superpowers/
+
+# 로컬 설정 (키·ID)
+application-local.yml

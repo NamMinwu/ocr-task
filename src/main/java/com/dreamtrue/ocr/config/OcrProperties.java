@@ -14,7 +14,9 @@ public record OcrProperties(
 ) {
     public record Claude(
             @DefaultValue("claude-opus-5") String model,
-            @DefaultValue("16000") long maxTokens
+            @DefaultValue("16000") long maxTokens,
+            /** 비워 두면 ANTHROPIC_API_KEY 환경변수를 사용한다. */
+            @DefaultValue("") String apiKey
     ) {}
 
     public record Google(
