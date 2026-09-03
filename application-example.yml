@@ -1,0 +1,26 @@
+# 이 파일을 저장소 루트에 application-local.yml 로 복사한 뒤 값을 채우세요.
+#
+#   cp application-example.yml application-local.yml
+#
+# application-local.yml 은 .gitignore 대상이라 커밋되지 않습니다.
+# 파일이 없어도 프로그램은 정상 동작하며, 그 경우 API 키는
+# ANTHROPIC_API_KEY 환경변수에서 읽습니다.
+
+ocr:
+  claude:
+    # console.anthropic.com 에서 발급. 비워 두면 ANTHROPIC_API_KEY 환경변수 사용.
+    api-key: "sk-ant-..."
+
+  google:
+    # GCP 콘솔에서 받은 OAuth 데스크톱 앱 클라이언트 JSON
+    oauth-client-path: ./credentials/oauth-client.json
+    # 최초 동의 후 토큰이 캐시되는 위치. 지우면 다시 동의해야 합니다.
+    token-store-path: ./credentials/tokens
+
+    # 스프레드시트 URL 의 /d/ 와 /edit 사이 문자열
+    #   docs.google.com/spreadsheets/d/★여기★/edit
+    spreadsheet-id: "여기에_스프레드시트_ID"
+
+    # Drive 폴더 URL 의 folders/ 뒤 문자열
+    #   drive.google.com/drive/folders/★여기★
+    drive-folder-id: "여기에_폴더_ID"

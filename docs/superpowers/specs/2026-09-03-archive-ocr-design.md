@@ -388,15 +388,24 @@ ocr:
     model: claude-opus-5
     effort: high
     max-tokens: 16000
+    api-key: ""          # 비우면 ANTHROPIC_API_KEY 환경변수 사용
   google:
-    credentials-path: ./credentials/service-account.json
+    oauth-client-path: ./credentials/oauth-client.json
+    token-store-path: ./credentials/tokens
     spreadsheet-id: <필수>
     drive-folder-id: <필수>
 ```
 
-- `ANTHROPIC_API_KEY` 환경변수
-- Google 인증은 서비스 계정 JSON 키. 대상 스프레드시트와 Drive 폴더를 서비스 계정
-  이메일에 **편집자**로 공유해야 한다 (README에 절차 기재)
+- 키·ID 는 저장소 루트의 `application-local.yml`(gitignore 대상)에 넣는다.
+  `application.yml` 의 `spring.config.import: optional:file:./application-local.yml`
+  이 이를 병합한다. 파일이 없으면 무시되므로 환경변수만으로도 실행된다 —
+  자격증명이 커밋되는 사고를 구조적으로 막으면서 두 방식을 모두 지원한다.
+- API 키는 `ocr.claude.api-key`, 비어 있으면 `ANTHROPIC_API_KEY` 환경변수
+- Google 인증은 **사용자 계정 OAuth(데스크톱 앱)**. 서비스 계정은 개인 Drive에 파일을
+  소유할 수 없어 업로드가 `403 storageQuotaExceeded` 로 실패한다(공유 드라이브가 있는
+  Workspace 환경 전용). 채점자 대부분이 개인 Google 계정이므로 OAuth 를 쓴다.
+  부수 효과로 스프레드시트·폴더를 별도 공유할 필요가 없어져 설정 단계가 줄어든다.
+  최초 1회 브라우저 동의 후 토큰은 `credentials/tokens/` 에 캐시된다.
 - `credentials/`, `output/`은 `.gitignore` 처리, `application-example.yml`만 동봉
 
 ### 7.1 CLI 플래그

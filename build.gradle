@@ -27,10 +27,15 @@ dependencies {
     implementation libs.google.drive
     implementation libs.google.auth
     implementation libs.google.apiclient
+    implementation libs.google.oauth.jetty
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation libs.mockwebserver
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-Xlint:deprecation'
 }
 
 tasks.named('test') { useJUnitPlatform() }
